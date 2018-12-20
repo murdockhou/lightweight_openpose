@@ -243,26 +243,29 @@ def get_dataset_pipeline(mode='train'):
 # except tf.errors.OutOfRangeError:
 #     print(count)
 
-# input_pipeline = get_train_dataset_pipeline()
-# iter = input_pipeline.make_initializable_iterator()
+# input_pipeline = get_dataset_pipeline(mode='valid')
+# iter = input_pipeline.make_one_shot_iterator()
+# imgs, heatmaps, pafs = iter.get_next()
+# count = 0
+# label = np.random.rand(100, 368, 368, 3)
+# loss = tf.nn.l2_loss(imgs-label)
+# heatmaps_placeholder = tf.placeholder(tf.float32, shape=[None, params['height']//params['input_scale'],
+#                                                                  params['width']//params['input_scale'], params['num_keypoints']])
 #
+# pafs_placeholder     = tf.placeholder(tf.float32, shape=[None, params['height']//params['input_scale'],
+#                                                                  params['width']//params['input_scale'], params['paf_channels']])
+# #
 # with tf.Session() as sess:
-#     sess.run([iter.initializer])
-#     for i in range(1):
-#         img, heatmap, paf = iter.get_next()
-#         im, h, p = sess.run([img, heatmap, paf])
-#         print (im.shape, h.shape, p.shape)
-#         hh = h[5,:, :, :]
-#         pp = p[5, :, :, 0]
-#         pp = np.expand_dims(pp, axis=2)
-#         pp = (pp - np.min(pp))/(np.max(pp) - np.min(pp)) * 255
-#         cv2.imwrite('img.jpg', im[5]*255)
-#         hh = np.sum(hh, axis=2, keepdims=True) * 255
-#         pp = np.sum(pp, axis=2, keepdims=True)
-#         hh = cv2.resize(hh, (386, 386))
-#         pp = cv2.resize(pp, (386, 386))
-#         cv2.imwrite('heat.jpg', hh)
-#         cv2.imwrite('paf.jpg', pp)
+#     sess.run(loss)
+#     try:
+#         print ('start training dataset....')
+#         while (1):
+#             _img, _h, _p = sess.run([imgs, heatmaps, pafs])
+#             sess.run(loss, feed_dict={heatmaps_placeholder:_h, pafs_placeholder:_p})
+#             count += 1
+#             print (count)
+#     except tf.errors.OutOfRangeError:
+#         print (count)
 
 # img_id = b'0f128955dd4210efae7d604fe399f5f1d63fa6fb'
 # json_file = parameters['train_json_file']
