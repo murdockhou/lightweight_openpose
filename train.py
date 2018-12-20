@@ -39,14 +39,14 @@ def train():
 
         # train dataset
         dataset = get_dataset_pipeline(mode='train')
-        iter = dataset.make_initializable_iterator()
-        # iter    = dataset.make_one_shot_iterator()
-        # imgs, heatmaps, pafs = iter.get_next()
+        # iter = dataset.make_initializable_iterator()
+        iter    = dataset.make_one_shot_iterator()
+        imgs, heatmaps, pafs = iter.get_next()
 
         #valid dataset
         valid_dataset = get_dataset_pipeline(mode='valid')
-        valid_iter    = valid_dataset.make_initializable_iterator()
-        # valid_imgs, valid_heatmaps, valid_pafs = valid_iter.get_next()
+        valid_iter    = valid_dataset.make_one_shot_iterator()
+        valid_imgs, valid_heatmaps, valid_pafs = valid_iter.get_next()
 
 
         imgs_placeholder     = tf.placeholder(tf.float32, shape=[None, params['height'], params['width'], 3])
@@ -163,10 +163,6 @@ def train():
 
         with tf.Session(graph=graph, config=config) as sess:
             sess.run(init_op)
-
-            sess.run(iter.initializer)
-            sess.run(valid_iter.initializer)
-
             sess.graph.finalize()
 
             # coord = tf.train.Coordinator()
@@ -186,7 +182,8 @@ def train():
             while (1):
                 if state == 'train' and train_step < train_steps_per_epoch * params['epoch']:
 
-                    _imgs, _heatmaps, _pafs = sess.run(iter.get_next())
+                    train_step += 1
+                    _imgs, _heatmaps, _pafs = sess.run([imgs, heatmaps, pafs])
 
                     predcpm1, predpaf1, predcpm2, predpaf2, \
                     total_loss, loss_cpm1, loss_paf1, loss_cpm2, loss_paf2, \
@@ -225,7 +222,7 @@ def train():
 
                 elif state == 'valid' and valid_step < valid_steps_per_epoch * params['epoch']:
 
-                    _validimgs, _validheatmaps, _validpafs = sess.run(valid_iter.get_next())
+                    _validimgs, _validheatmaps, _validpafs = sess.run([valid_imgs, valid_heatmaps, valid_pafs])
                     valid_total_loss = sess.run(valid_loss,
                                                 feed_dict={valid_imgs_placeholder: _validimgs,
                                                            valid_pafs_placeholder: _validpafs,
