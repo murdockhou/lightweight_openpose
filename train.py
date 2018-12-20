@@ -172,7 +172,7 @@ def train():
             valid_losses = 0
 
             s_time = time.time()
-            state = 'valid'
+            state = 'train'
 
             if params['finetuning'] is not None:
                 saver.restore(sess, checkpoint_dir)
