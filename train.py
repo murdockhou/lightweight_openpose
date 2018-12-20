@@ -39,60 +39,57 @@ def train():
 
         # train dataset
         dataset = get_dataset_pipeline(mode='train')
-        iter    = dataset.make_one_shot_iterator()
+        # iter = dataset.make_initializable_iterator()
+        iter = dataset.make_one_shot_iterator()
         imgs, heatmaps, pafs = iter.get_next()
 
-        imgs = tf.reshape(imgs, shape=[-1, params['height'], params['width'], 3])
-        heatmaps = tf.reshape(heatmaps, shape=[-1,
-                                               params['height']//params['input_scale'],
-                                               params['width']//params['input_scale'],
-                                               params['num_keypoints']])
-        pafs = tf.reshape(pafs, shape=[-1,
-                                       params['height']//params['input_scale'],
-                                       params['width']//params['input_scale'],
-                                       params['paf_channels']])
-
-
-
-        #valid dataset
+        # valid dataset
         valid_dataset = get_dataset_pipeline(mode='valid')
-        valid_iter    = valid_dataset.make_one_shot_iterator()
+        valid_iter = valid_dataset.make_one_shot_iterator()
         valid_imgs, valid_heatmaps, valid_pafs = valid_iter.get_next()
 
+        imgs_placeholder = tf.placeholder(tf.float32, shape=[None, params['height'], params['width'], 3])
 
-        valid_imgs = tf.reshape(valid_imgs, shape=[-1, params['height'], params['width'], 3])
-        valid_heatmaps = tf.reshape(valid_heatmaps, shape=[-1,
-                                               params['height'] // params['input_scale'],
-                                               params['width'] // params['input_scale'],
-                                               params['num_keypoints']])
-        valid_pafs = tf.reshape(valid_pafs, shape=[-1,
-                                       params['height'] // params['input_scale'],
-                                       params['width'] // params['input_scale'],
-                                       params['paf_channels']])
+        heatmaps_placeholder = tf.placeholder(tf.float32, shape=[None, params['height'] // params['input_scale'],
+                                                                 params['width'] // params['input_scale'],
+                                                                 params['num_keypoints']])
 
+        pafs_placeholder = tf.placeholder(tf.float32, shape=[None, params['height'] // params['input_scale'],
+                                                             params['width'] // params['input_scale'],
+                                                             params['paf_channels']])
 
-
-
-        pred_cpm1, pred_paf1, pred_cpm, pred_paf = create_light_weight_openpose(inputs=imgs,
-                                                                                heatmap_channels=params['num_keypoints'],
+        pred_cpm1, pred_paf1, pred_cpm, pred_paf = create_light_weight_openpose(inputs=imgs_placeholder,
+                                                                                heatmap_channels=params[
+                                                                                    'num_keypoints'],
                                                                                 paf_channels=params['paf_channels'],
                                                                                 is_training=True)
 
+        valid_imgs_placeholder = tf.placeholder(tf.float32, shape=[None, params['height'], params['width'], 3])
 
-        valid_pred_cpm1, valid_pred_paf1, valid_pred_cpm, valid_pred_paf = create_light_weight_openpose(inputs=valid_imgs,
-                                                                                heatmap_channels=params['num_keypoints'],
-                                                                                paf_channels=params['paf_channels'],
-                                                                                is_training=False)
+        valid_heatmaps_placeholder = tf.placeholder(tf.float32, shape=[None, params['height'] // params['input_scale'],
+                                                                       params['width'] // params['input_scale'],
+                                                                       params['num_keypoints']])
 
-        cpm1_loss = tf.nn.l2_loss(pred_cpm1 - heatmaps)
-        cpm2_loss = tf.nn.l2_loss(pred_cpm - heatmaps)
-        paf1_loss = tf.nn.l2_loss(pred_paf1 - pafs)
-        paf2_loss = tf.nn.l2_loss(pred_paf - pafs)
+        valid_pafs_placeholder = tf.placeholder(tf.float32, shape=[None, params['height'] // params['input_scale'],
+                                                                   params['width'] // params['input_scale'],
+                                                                   params['paf_channels']])
+
+        valid_pred_cpm1, valid_pred_paf1, valid_pred_cpm, valid_pred_paf = create_light_weight_openpose(
+            inputs=valid_imgs_placeholder,
+            heatmap_channels=params['num_keypoints'],
+            paf_channels=params['paf_channels'],
+            is_training=False)
+
+        cpm1_loss = tf.nn.l2_loss(pred_cpm1 - heatmaps_placeholder)
+        cpm2_loss = tf.nn.l2_loss(pred_cpm - heatmaps_placeholder)
+        paf1_loss = tf.nn.l2_loss(pred_paf1 - pafs_placeholder)
+        paf2_loss = tf.nn.l2_loss(pred_paf - pafs_placeholder)
         loss = cpm1_loss + cpm2_loss + paf1_loss + paf2_loss
 
-        valid_loss = tf.nn.l2_loss(valid_pred_cpm1 - valid_heatmaps) + tf.nn.l2_loss(valid_pred_cpm - valid_heatmaps) +\
-                     tf.nn.l2_loss(valid_pred_paf1 - valid_pafs) + tf.nn.l2_loss(valid_pred_paf - valid_pafs)
-
+        valid_loss = tf.nn.l2_loss(valid_pred_cpm1 - valid_heatmaps_placeholder) + tf.nn.l2_loss(
+            valid_pred_cpm - valid_heatmaps_placeholder) + \
+                     tf.nn.l2_loss(valid_pred_paf1 - valid_pafs_placeholder) + tf.nn.l2_loss(
+            valid_pred_paf - valid_pafs_placeholder)
 
         # step lr
         global_step  = tf.Variable(0, trainable=False)
@@ -142,18 +139,17 @@ def train():
         tf.summary.scalar('cpm_loss', cpm2_loss)
         tf.summary.scalar('paf_loss', paf2_loss)
         tf.summary.scalar('lr', learning_rate)
-        tf.summary.image('img', imgs, max_outputs=3)
-        tf.summary.image('label_heat', tf.reduce_sum(heatmaps, axis=3, keepdims=True), max_outputs=3)
-        tf.summary.image('right_shoulder', tf.expand_dims(heatmaps[...,0], axis=3), max_outputs=3)
+        tf.summary.image('img', imgs_placeholder, max_outputs=3)
+        tf.summary.image('label_heat', tf.reduce_sum(heatmaps_placeholder, axis=3, keepdims=True), max_outputs=3)
+        tf.summary.image('right_shoulder', tf.expand_dims(heatmaps_placeholder[..., 0], axis=3), max_outputs=3)
         tf.summary.image('pred_heat', tf.reduce_sum(pred_cpm, axis=3, keepdims=True), max_outputs=3)
 
-        true_paf_0 = pafs[...,0]
-        pred_paf_0 = pred_paf[...,0]
+        true_paf_0 = pafs_placeholder[..., 0]
+        pred_paf_0 = pred_paf[..., 0]
         true_paf_0 = (true_paf_0 - tf.reduce_min(true_paf_0)) / (tf.reduce_max(true_paf_0) - tf.reduce_min(true_paf_0))
         pred_paf_0 = (pred_paf_0 - tf.reduce_min(pred_paf_0)) / (tf.reduce_max(pred_paf_0) - tf.reduce_min(pred_paf_0))
         tf.summary.image('label_paf0', tf.expand_dims(true_paf_0, axis=3), max_outputs=3)
         tf.summary.image('pred_paf0', tf.expand_dims(pred_paf_0, axis=3), max_outputs=3)
-
         summary_op = tf.summary.merge_all()
         summary_writer = tf.summary.FileWriter(checkpoint_dir, graph)
 
@@ -191,13 +187,17 @@ def train():
                 if state == 'train' and train_step < train_steps_per_epoch * params['epoch']:
 
                     train_step += 1
+                    _imgs, _heatmaps, _pafs = sess.run([imgs, heatmaps, pafs])
 
                     predcpm1, predpaf1, predcpm2, predpaf2, \
                     total_loss, loss_cpm1, loss_paf1, loss_cpm2, loss_paf2, \
                     lr, _, merge_op = sess.run(
                         [pred_cpm1, pred_paf1, pred_cpm, pred_paf,
                          loss, cpm1_loss, paf1_loss, cpm2_loss, paf2_loss,
-                         learning_rate, train_op, summary_op]
+                         learning_rate, train_op, summary_op],
+                        feed_dict={imgs_placeholder: _imgs,
+                                   pafs_placeholder: _pafs,
+                                   heatmaps_placeholder: _heatmaps}
                     )
 
                     if train_step % 10 == 0:
@@ -219,8 +219,10 @@ def train():
 
                 elif state == 'valid' and valid_step < valid_steps_per_epoch * params['epoch']:
 
-
-                    valid_total_loss = sess.run(valid_loss)
+                    _validimgs, _validheatmaps, _validpafs = sess.run([valid_imgs, valid_heatmaps, valid_pafs])
+                    valid_total_loss = sess.run(valid_loss,  feed_dict={valid_imgs_placeholder: _validimgs,
+                                                           valid_pafs_placeholder: _validpafs,
+                                                           valid_heatmaps_placeholder: _validheatmaps})
 
                     valid_step += 1
                     valid_losses += valid_total_loss
