@@ -187,6 +187,7 @@ def train():
                 print ('#------------------------Current lr, global_step = {}---------------------------#'.format(sess.run([learning_rate, global_step])))
 
             while (1):
+                assert (state == 'train' or state == 'valid')
                 if state == 'train' and train_step < train_steps_per_epoch * params['epoch']:
 
                     train_step += 1
@@ -225,7 +226,7 @@ def train():
                     valid_losses += valid_total_loss
 
                     print ('valid step ', valid_step)
-                    if valid_step % 300 == 0:
+                    if valid_step % valid_steps_per_epoch == 0:
                         valid_losses /= (valid_steps_per_epoch * params['valid_batch_size'])
                         print('-----------------------Valid Loss == {}'.format(valid_losses))
                         logger.info('valid loss == {}'.format(valid_losses))
@@ -234,7 +235,7 @@ def train():
                         state = 'train'
                         s_time = time.time()
                 else:
-                    assert (state == 'train' or state == 'valid')
+                    break
 
 train()
 
