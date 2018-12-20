@@ -231,7 +231,7 @@ def train():
                     valid_step += 1
                     valid_losses += valid_total_loss
                     print ('valid step ', valid_step)
-                    if valid_step % 100 == 0:
+                    if valid_step % 300 == 0:
                         valid_losses /= (valid_steps_per_epoch * params['valid_batch_size'])
                         print('-----------------------Valid Loss == {}'.format(valid_losses))
                         logger.info('valid loss == {}'.format(valid_losses))
