@@ -43,8 +43,9 @@ def dw_bn_relu(inputs, filters, kernel_size, stride=1, dilation_rate=1, kernel_i
             net = net
     elif format == 'depth_wise':
         # depthwise_filter = tf.Variable([kernel_size, kernel_size, inputs.get_shape()[-1], 1])
-        depthwise_filter = tf.get_variable(scope+'_3x3_weight', shape=[kernel_size, kernel_size, inputs.get_shape()[-1], 1],
-                                           dtype=tf.float32, trainable=True, initializer=kernel_initializer)
+        with tf.variable_scope(scope):
+            depthwise_filter = tf.get_variable(scope+'_3x3_weight', shape=[kernel_size, kernel_size, inputs.get_shape()[-1], 1],
+                                               dtype=tf.float32, trainable=True, initializer=kernel_initializer)
         net = tf.nn.depthwise_conv2d(inputs,
                                      filter = depthwise_filter,
                                      strides = [1,stride,stride,1],
@@ -78,7 +79,7 @@ def dw_bn_relu(inputs, filters, kernel_size, stride=1, dilation_rate=1, kernel_i
 
 def create_light_weight_openpose(inputs, heatmap_channels, paf_channels, is_training=True):
 
-    with tf.variable_scope('light_weight_open_pose'):
+    with tf.variable_scope('light_weight_open_pose', reuse=tf.AUTO_REUSE):
         conv1 = conv_bn_relu(inputs=inputs, filters=32, kernel_size=3, stride=2, use_bias=False, is_training=is_training, scope='conv1')
         conv2_1 = dw_bn_relu(inputs=conv1, filters=64, kernel_size=3, stride=1, use_bias=False, is_training=is_training, scope='conv2_1')
         conv2_2 = dw_bn_relu(inputs=conv2_1, filters=128, kernel_size=3, stride=2, use_bias=False, is_training=is_training, scope='conv2_2')
