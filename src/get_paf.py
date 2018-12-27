@@ -7,20 +7,14 @@
 @time: 18-10-30 17:48
 '''
 
-import sys
-sys.path.append('../')
-from src.parameters import params
-
 import numpy as np
 
-parameter = params
-
-def get_paf(keypoints, ori_height, ori_width):
+def get_paf(keypoints, ori_height, ori_width, paf_height, paf_width, paf_channels, paf_width_thre):
 
     global parameter
 
-    paf_height = parameter['height'] // parameter['input_scale']
-    paf_width  = parameter['width'] // parameter['input_scale']
+    # paf_height = parameter['height'] // parameter['input_scale']
+    # paf_width  = parameter['width'] // parameter['input_scale']
 
     factorx = paf_width / ori_width
     factory = paf_height / ori_height
@@ -30,7 +24,7 @@ def get_paf(keypoints, ori_height, ori_width):
     pt1 = [3,3,3]
     pt2 = [0,1,2]
 
-    pafs = np.zeros((parameter['paf_channels'], paf_height, paf_width), dtype=np.float32)
+    pafs = np.zeros((paf_channels, paf_height, paf_width), dtype=np.float32)
     # print ('---------------------------------------------------')
     for i in range(len(pt1)):
         count = np.zeros((paf_height, paf_width))
@@ -46,7 +40,7 @@ def get_paf(keypoints, ori_height, ori_width):
             center_y = val[pt2[i], 1] * factory
             centerB  = np.asarray([center_x, center_y])
 
-            paf_map, mask = create_paf_map(centerA, centerB, paf_width, paf_height, parameter['paf_width_thre'])
+            paf_map, mask = create_paf_map(centerA, centerB, paf_width, paf_height, paf_width_thre)
             pafs[2 * i:2 * i + 2, :, :] += paf_map
             count[mask == True] += 1
 

@@ -18,7 +18,7 @@ sys.path.append('../')
 from src.parameters import params
 from src.get_heatmap import get_heatmap
 from src.get_paf import get_paf
-from src.img_preprocess import rotate, flip
+from src.img_preprocess import rotate, flip, aug_scale_pad
 
 parameters = params
 id_kps_dict = {}
@@ -42,27 +42,29 @@ def prepare(json_file):
     return img_ids
 
 def _img_preprocessing(img, kps):
-    h, w, c = img.shape
 
     # run random horizontally flip with 0.5 probability
     rd_filp = np.random.randint(1, 11)
     if rd_filp > 5:
-        img, kps = flip(img, kps, 1)
+        img, kps = flip(img, kps, code=1)
 
-    # run scale hue, saturation, brightness with coefficients uniformly drawn from [0.6, 1.4]
-    img_zero = np.zeros([h, w, c], img.dtype)
-    rd_adjust1 = np.random.uniform(0.6, 1.5)
-    rd_adjust2 = np.random.uniform(0.6, 1.5)
-    img = cv2.addWeighted(img, rd_adjust1, img_zero, abs(rd_adjust1-1), rd_adjust2)
+    # run scale from 1 to 2
+    rd_scale = np.random.randint(1, 3)
+    img, kps = aug_scale_pad(img, kps, scale=rd_scale)
 
-    # run random rotate 90 degree or -90 degree
-    rd_rotate = np.random.randint(1, 10)
-    if rd_rotate > 6:
-        img, kps = rotate(img, kps, 90)
-    elif rd_rotate < 4:
-        img, kps = rotate(img, kps, -90)
+    # run random rotate [-90, +90] for img with prob 0.2
+    rd_rotate = np.random.randint(1, 11)
+    if rd_rotate > 8:
+        rd_degree = np.random.randint(-90, 91)
+        img, kps = rotate(img, kps, rd_degree)
 
-    return img, kps
+    # run convert img from RGB to gray randomly
+    rd_gray = np.random.randint(1, 11)
+    if rd_gray > 5:
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+        img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+
+    return img, kps, rd_scale
 
 def _parse_function(img_id, mode):
 
@@ -77,7 +79,7 @@ def _parse_function(img_id, mode):
     # read img_data and convert BGR to RGB
     if mode == 'train':
         img_data = cv2.imread(os.path.join(parameters['train_data_path'], img_id + '.jpg'))
-        data_aug = False
+        data_aug = True
     elif mode == 'valid':
         img_data = cv2.imread(os.path.join(parameters['valid_data_path'], img_id + '.jpg'))
         data_aug = False
@@ -103,14 +105,26 @@ def _parse_function(img_id, mode):
     keypoints = kps
 
     if data_aug:
-        img_data, keypoints = _img_preprocessing(img_data, keypoints)
+        img_data, keypoints, rd_scale = _img_preprocessing(img_data, keypoints)
+    else:
+        rd_scale = 1
 
-    h, w, c  = img_data.shape
+    shape = img_data.shape
+    h = shape[0]
+    w = shape[1]
     img      = cv2.resize(img_data, (parameters['width'], parameters['height']))
     img      = np.asarray(img, dtype=np.float32) / 255
 
-    heatmap  = get_heatmap(keypoints, h, w)
-    paf      = get_paf(keypoints, h, w)
+    heatmap_height = parameters['height'] // parameters['input_scale']
+    heatmap_width  = parameters['width'] // parameters['input_scale']
+    heatmap_channels = parameters['num_keypoints']
+    heatmap  = get_heatmap(keypoints, h, w,
+                           heatmap_height=heatmap_height,
+                           heatmap_width=heatmap_width,
+                           heatmap_channels=heatmap_channels,
+                           sigma=parameters['sigma']/rd_scale)
+    paf      = get_paf(keypoints, h, w, paf_height=heatmap_height, paf_width=heatmap_width,
+                       paf_channels=parameters['paf_channels'], paf_width_thre=parameters['paf_width_thre'])
 
     return img, heatmap, paf
 
@@ -143,6 +157,6 @@ def get_dataset_pipeline(mode='train'):
         num_parallel_calls=12)
 
     dataset = dataset.batch(batch_size, drop_remainder=True).repeat(1)
-    dataset = dataset.prefetch(buffer_size=batch_size*50)
+    dataset = dataset.prefetch(buffer_size=batch_size*12*4)
 
     return dataset

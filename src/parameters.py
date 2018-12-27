@@ -34,3 +34,9 @@ params['paf_width_thre'] = 1
 params['finetuning']      =  None
 params['checkpoint_path'] = '/media/ulsee/E/half_body/lightweight_openpose'
 
+# test and eval
+params['video_path'] = '/media/ulsee/E/video/111.ts'
+params['img_path'] = '/media/ulsee/E/datasets/coco2017/val2017'
+params['test_model'] = '/media/ulsee/E/half_body/new_light_pose/model.ckpt-54320'
+
+
