@@ -10,26 +10,33 @@
 import numpy as np
 
 def get_paf(keypoints, ori_height, ori_width, paf_height, paf_width, paf_channels, paf_width_thre):
-
-    global parameter
-
-    # paf_height = parameter['height'] // parameter['input_scale']
-    # paf_width  = parameter['width'] // parameter['input_scale']
-
+    '''
+    function that create paf based keypoints
+    :param keypoints: ndarray with shape [person_num, joints_num, 3], each joint contains three attribute, [x, y, v]
+    :param ori_height: ori_img height
+    :param ori_width:  ori_img width
+    :param paf_height: paf_height
+    :param paf_width:  paf_width
+    :param paf_channels: how many paf_channels will return. the number of paf_channels is 2 * connect_num, which
+                         connect_num is edges num of points.
+    :param paf_width_thre: the threshold that controls the area about paf connection.
+    :return:
+        A ndarray with shape [paf_height, paf_width, paf_channels].
+    '''
     factorx = paf_width / ori_width
     factory = paf_height / ori_height
 
     # pt1 = [0,0,0,1,1,2,3]
     # pt2 = [1,2,3,6,7,4,5]
-    pt1 = [3,3,3]
-    pt2 = [0,1,2]
+    pt1 = [1]
+    pt2 = [0]
 
     pafs = np.zeros((paf_channels, paf_height, paf_width), dtype=np.float32)
     # print ('---------------------------------------------------')
     for i in range(len(pt1)):
         count = np.zeros((paf_height, paf_width))
-        for key, val in keypoints.items():
-            # print (key)
+        for j in range(keypoints.shape[0]):
+            val = keypoints[j]
             if (val[pt1[i], 0] == 0 and val[pt1[i], 1] == 0) or (val[pt2[i], 0] == 0  and val[pt2[i], 1] == 0):
                 continue
             center_x = val[pt1[i], 0] * factorx

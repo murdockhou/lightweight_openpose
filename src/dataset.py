@@ -15,13 +15,19 @@ import numpy as np
 
 import sys
 sys.path.append('../')
-from src.parameters import params
+
 from src.get_heatmap import get_heatmap
 from src.get_paf import get_paf
-from src.img_preprocess import rotate, flip, aug_scale_pad
+from src.img_aug import img_aug_fuc
 
-parameters = params
 id_kps_dict = {}
+parameters = {}
+
+
+def set_params(params):
+    global parameters
+    parameters = params
+
 
 def prepare(json_file):
 
@@ -41,36 +47,11 @@ def prepare(json_file):
 
     return img_ids
 
-def _img_preprocessing(img, kps):
-
-    # run random horizontally flip with 0.5 probability
-    rd_filp = np.random.randint(1, 11)
-    if rd_filp > 5:
-        img, kps = flip(img, kps, code=1)
-
-    # run scale from 1 to 2
-    rd_scale = np.random.randint(1, 3)
-    img, kps = aug_scale_pad(img, kps, scale=rd_scale)
-
-    # run random rotate [-90, +90] for img with prob 0.2
-    rd_rotate = np.random.randint(1, 11)
-    if rd_rotate > 8:
-        rd_degree = np.random.randint(-90, 91)
-        img, kps = rotate(img, kps, rd_degree)
-
-    # run convert img from RGB to gray randomly
-    rd_gray = np.random.randint(1, 11)
-    if rd_gray > 5:
-        img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-        img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
-
-    return img, kps, rd_scale
 
 def _parse_function(img_id, mode):
 
-    global parameters
-    global id_kps_dict
-    # print ('###########################################')
+    global id_kps_dict, parameters
+
     if type(img_id) == type(b'123'):
         img_id = str(img_id, encoding='utf-8')
     if type(mode) == type(b'123'):
@@ -80,58 +61,44 @@ def _parse_function(img_id, mode):
     if mode == 'train':
         img_data = cv2.imread(os.path.join(parameters['train_data_path'], img_id + '.jpg'))
         data_aug = True
+        sigma = parameters['sigma']
     elif mode == 'valid':
         img_data = cv2.imread(os.path.join(parameters['valid_data_path'], img_id + '.jpg'))
         data_aug = False
+        sigma = 1.
     else:
         img_data = None
         data_aug = None
+        sigma    = None
         print('parse_function mode must be train or valid.')
         exit(-1)
 
-    b,g,r    = cv2.split(img_data)
-    img_data = cv2.merge([r,g,b])
+    h, w, _ = img_data.shape
 
     # get kps
+    kps_channels = parameters['num_kps']
+    paf_channels = parameters['paf']
     keypoints = id_kps_dict[img_id]
-    kps = dict()
-    for i in range(keypoints.shape[0]):
-        val = []
-        val.append(keypoints[i, 0, :])
-        val.append(keypoints[i, 3, :])
-        val.append(keypoints[i, 12, :])
-        val.append(keypoints[i, 13, :])
-        kps[str(i)] = np.reshape(np.asarray(val), newshape=(-1, 3))
-    keypoints = kps
+
+    keypoints = np.reshape(np.asarray(keypoints), newshape=(-1, kps_channels, 3))
 
     if data_aug:
-        img_data, keypoints, rd_scale = _img_preprocessing(img_data, keypoints)
-    else:
-        rd_scale = 1
+        img_data, keypoints = img_aug_fuc(img_data, keypoints)
 
-    shape = img_data.shape
-    h = shape[0]
-    w = shape[1]
-    img      = cv2.resize(img_data, (parameters['width'], parameters['height']))
-    img      = np.asarray(img, dtype=np.float32) / 255
+    img_data = cv2.cvtColor(img_data, cv2.COLOR_BGR2RGB)
 
+    img = cv2.resize(img_data, (parameters['width'], parameters['height']))
+    img = np.asarray(img, dtype=np.float32) / 255.
     heatmap_height = parameters['height'] // parameters['input_scale']
-    heatmap_width  = parameters['width'] // parameters['input_scale']
-    heatmap_channels = parameters['num_keypoints']
-    heatmap  = get_heatmap(keypoints, h, w,
-                           heatmap_height=heatmap_height,
-                           heatmap_width=heatmap_width,
-                           heatmap_channels=heatmap_channels,
-                           sigma=parameters['sigma']/rd_scale)
-    paf      = get_paf(keypoints, h, w, paf_height=heatmap_height, paf_width=heatmap_width,
-                       paf_channels=parameters['paf_channels'], paf_width_thre=parameters['paf_width_thre'])
+    heatmap_width = parameters['width'] // parameters['input_scale']
 
+    heatmap = get_heatmap(keypoints, h, w, heatmap_height, heatmap_width, kps_channels, sigma)
+    paf = get_paf(keypoints, h, w, heatmap_height, heatmap_width, paf_channels, parameters['paf_width_thre'])
     return img, heatmap, paf
 
-def get_dataset_pipeline(mode='train'):
+def get_dataset_pipeline(parameters, mode='train'):
 
-    global parameters
-
+    set_params(parameters)
     if mode == 'train':
         json_file = parameters['train_json_file']
         batch_size = parameters['batch_size']
@@ -160,3 +127,26 @@ def get_dataset_pipeline(mode='train'):
     dataset = dataset.prefetch(buffer_size=batch_size*12*4)
 
     return dataset
+
+if __name__ == '__main__':
+    from src.train_config import train_config as params
+    set_params(params)
+    imgids = prepare(params['train_json_file'])
+    for i in range(10):
+        _parse_function(imgids[i], 'train')
+#
+# tf.enable_eager_execution()
+# dd = get_dataset_pipeline(params)
+# iter = dd.make_one_shot_iterator()
+# count = 0
+# try:
+#     print ('start training dataset....')
+#     while (1):
+#         imgs, hp = iter.get_next()
+#         print (imgs.shape, hp.shape)
+#         count += 1
+#         # print (count)
+#         exit(0)
+#
+# except tf.errors.OutOfRangeError:
+#     print (count)
