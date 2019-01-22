@@ -2,14 +2,14 @@ A tensorflow implementation about Arxiv Paper "[Real-time 2D Multi-Person Pose E
 
 **Requirement**
 * tensorflow >= 1.11.0
-* python 3.5+
+* python 3.6+
 * cuda && cudnn
 
 **Train**
 
 ``python3 train.py``
 
-all parameters has been set in ``src/parameters.py``.
+all parameters has been set in ``src/train_config.py``.
 
 **Train Dataset**
 
@@ -18,7 +18,5 @@ we use **ai-challenger** format dataset, which can found in this [website](https
 **Note**
 
 * after training one epoch done, one validation epoch will be executed. So we set the `dataset.repeat(1)`. And use `make_initializable_iterator()` instead of `make_one_shot_iterator()`
-* we only used to trian four points of one single person, `head, neck, left_shoulder, right_shoulder`. For 
-people who wants to train all 14 points, just change the  `params['num_keypoints] and params['paf_channels]` in 
-`parameters.py`. And also need to change detail code about `line 96 - 103` in `dataset.py` and `line 30 - 31 ` in `get_paf.py`.
+* we modified some implementation about this model which inspired by this [article](https://arxiv.org/abs/1901.01760). we not only send previous stage output information to next stage as its input, but also used this previous output information to add next stage output featuremap in order to get next final output, which can be found in article.
 
