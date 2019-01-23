@@ -28,8 +28,8 @@ def get_paf(keypoints, ori_height, ori_width, paf_height, paf_width, paf_channel
 
     # pt1 = [0,0,0,1,1,2,3]
     # pt2 = [1,2,3,6,7,4,5]
-    pt1 = [1]
-    pt2 = [0]
+    pt1 = [0, 1, 3, 4, 6, 7, 9, 10, 12, 13, 13, 13, 13]
+    pt2 = [1, 2, 4, 5, 7, 8, 10, 11, 13, 0, 3, 6, 9]
 
     pafs = np.zeros((paf_channels, paf_height, paf_width), dtype=np.float32)
     # print ('---------------------------------------------------')
@@ -37,7 +37,8 @@ def get_paf(keypoints, ori_height, ori_width, paf_height, paf_width, paf_channel
         count = np.zeros((paf_height, paf_width))
         for j in range(keypoints.shape[0]):
             val = keypoints[j]
-            if (val[pt1[i], 0] == 0 and val[pt1[i], 1] == 0) or (val[pt2[i], 0] == 0  and val[pt2[i], 1] == 0):
+            if (val[pt1[i], 0] == 0 and val[pt1[i], 1] == 0) or (val[pt2[i], 0] == 0  and val[pt2[i], 1] == 0) or \
+                val[pt1[i], 2] == 3 or val[pt2[i], 2] == 3:
                 continue
             center_x = val[pt1[i], 0] * factorx
             center_y = val[pt1[i], 1] * factory

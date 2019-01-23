@@ -44,6 +44,10 @@ def get_heatmap(keypoints, ori_height, ori_width, heatmap_height, heatmap_width,
                 continue
             if center_x < 0 or center_y < 0:
                 continue
+            if center_x == 0 and center_y == 0:
+                continue
+            if people[i][2] == 3:
+                continue
             if scales is not None:
                 scale = scales[j][i][0]
                 if scale == -1 or scale == 3:
