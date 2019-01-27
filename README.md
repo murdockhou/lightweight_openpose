@@ -4,6 +4,7 @@ A tensorflow implementation about Arxiv Paper "[Real-time 2D Multi-Person Pose E
 * tensorflow >= 1.11.0
 * python 3.6+
 * cuda && cudnn
+* [imgaug](https://github.com/aleju/imgaug)
 
 **Train**
 
