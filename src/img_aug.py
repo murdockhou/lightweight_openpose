@@ -41,7 +41,7 @@ def img_aug_fuc(img, kps):
         iaa.Multiply((0.7, 1.5)),  # 改变亮度,不影响关键点 (后面可逐步增大至4, 5, 6)
         iaa.Affine(
             rotate=(-45, 45),
-            scale=(0.5, 0.7),
+            scale=(0.5, 1.5),
             mode='constant'
         ),  # 旋转然后缩放
         iaa.Grayscale((0.0, 1.0)),  # 随机变成灰度图

@@ -13,13 +13,13 @@ import time
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-from src.head_neck_count_small_channels import create_head_neck_count_model
+from src.lightweight_openpose import light_openpose
 from src.pose_decode import decode_pose
 # from src.pose_decode_old import decode_pose
 params = {}
-params['test_model'] = '/media/ulsee/E/head_neck_count/20190115-1957/model.ckpt-62072'
-params['video_path'] = '/media/ulsee/E/video/bank/jiachaojian30.mp4'
-params['img_path']   = '/media/ulsee/E/video/SmartCity/images'
+params['test_model'] = '/home/ulsee/server/lightweight_openpose/20190123-0355/model.ckpt-46552/model.ckpt-108619'
+# params['video_path'] = '/media/ulsee/E/video/bank/jiachaojian30.mp4'
+params['img_path']   = '/media/ulsee/E/ai_format_dataset/lsp_imgs'
 # params['img_path']   = '/media/ulsee/E/yuncong/yuncong_data/our/test/0/'
 params['score_threshold'] = 0.1
 params['nms_threshold']   = 5
@@ -132,8 +132,8 @@ def main():
 
     input_img = tf.placeholder(tf.float32, shape=[1, None, None, 3])
 
-    _1, _2, cpm, paf = create_head_neck_count_model(input_img, dilation_rate=1, joints=2, paf=2, is_training=False)
-    # _, output = create_hourglass_net(input_img, is_training=False)
+    _1, _2, cpm, paf = light_openpose(input_img, is_training=False)
+
     saver = tf.train.Saver()
 
     total_img = 0
@@ -182,7 +182,7 @@ def main():
                 img_data = cv2.cvtColor(img_data, code=cv2.COLOR_BGR2RGB)
                 orih, oriw, c = img_data.shape
                 # img = img_data / 255.
-                img = cv2.resize(img_data, (368*2, 368*2)) / 255.
+                img = cv2.resize(img_data, (368, 368)) / 255.
                 # img = cv2.resize(img_data, (320, 320)) / 255.
                 start_time = time.time()
                 heatmap, _paf = sess.run([cpm, paf], feed_dict={input_img: [img]})
@@ -196,11 +196,10 @@ def main():
                 # cv2.waitKey(0)
                 # print (heatmap.shape, _paf.shape)
                 end_time = time.time()
-                canvas, joints_list = pose_nms(img, heatmap[0], params['score_threshold'], params['nms_threshold'])
-                # canvas, joint_list, person_to_joint_assoc = decode_pose(img, params, heatmap[0], _paf[0])
+                # canvas, joints_list = pose_nms(img, heatmap[0], params['score_threshold'], params['nms_threshold'])
+                canvas, joint_list, person_to_joint_assoc = decode_pose(img, params, heatmap[0], _paf[0])
                 # print (joint_list)
                 # print (person_to_joint_assoc)
-
                 canvas = canvas.astype(np.float32)
                 canvas = cv2.cvtColor(canvas, cv2.COLOR_BGR2RGB)
                 decode_time = time.time()

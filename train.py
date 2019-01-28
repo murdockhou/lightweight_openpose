@@ -12,8 +12,7 @@ import tensorflow as tf
 from src.dataset import get_dataset_pipeline
 from src.train_config import train_config as params
 
-# from src.head_neck_count_ori import create_head_neck_count_model
-from src.head_neck_count_2 import create_head_neck_count_model
+from src.lightweight_openpose import light_openpose
 
 import os
 from datetime import datetime
@@ -52,7 +51,7 @@ def get_logger(log):
 def train():
     # params['input_scale'] = 4
     train_steps_per_epoch = params['train_nums'] // params['batch_size']
-    os.environ['CUDA_VISIBLE_DEVICES'] = '4'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '0'
     current_time = datetime.now().strftime('%Y%m%d-%H%M')
     if params['finetuning'] is None:
         checkpoint_dir = os.path.join(params['checkpoint_path'], current_time)
@@ -86,7 +85,7 @@ def train():
                                                              params['width'] // params['input_scale'],
                                                              params['paf']], name='paf')
 
-        cpms1, pafs1, cpm, paf = create_head_neck_count_model(
+        cpms1, pafs1, cpm, paf = light_openpose(
             inputs=imgs_placeholder,
             joints=params['num_kps'],
             paf=params['paf'],
@@ -110,7 +109,7 @@ def train():
                                                              params['width'] // params['input_scale'],
                                                              params['paf']], name='v_paf')
 
-        _1, _2, valid_cpm, valid_paf = create_head_neck_count_model(
+        _1, _2, valid_cpm, valid_paf = light_openpose(
             inputs=valid_imgs_placeholder,
             joints=params['num_kps'],
             paf=params['paf'],

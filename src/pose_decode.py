@@ -14,13 +14,23 @@ from scipy.ndimage.filters import gaussian_filter, maximum_filter
 from scipy.ndimage.morphology import generate_binary_structure
 
 # limb连接的点的id
-joint_to_limb_heatmap_relationship = [[0, 1]]
+joint_to_limb_heatmap_relationship = [[0, 1], [1,2], [3, 4], [4, 5], [6, 7], [7, 8],
+                                      [9, 10], [10, 11], [12, 13], [13, 0], [13, 3], [13, 6], [13, 9]]
 
 # 每个limb在paf中的id,例如第一个limb就是前两个paf的channel
-paf_xy_coords_per_limb = [[1, 0]]
-colors = [[255, 0, 0], [0,255,0]]
+paf_xy_coords_per_limb = [[0, 1], [2, 3], [4, 5], [6, 7], [8, 9], [10, 11], [12, 13], [14, 15], [16, 17],
+                          [18, 19], [20, 21], [22, 23], [24, 25]]
+colors = [[255, 0, 0], [0,255,0], [0, 0, 255],
+[255, 0, 0], [0,255,0], [0, 0, 255],
+[255, 0, 0], [0,255,0], [0, 0, 255],
+[255, 0, 0], [0,255,0], [0, 0, 255],
+[255, 0, 0]]
+          # [255, 255,0], [255, 0, 255], [0, 255, 255],
+          # [238, 248, 220], [255, 165, 100], [20, 205, 50],
+          # [0, 191, 255], [0, 0, 205], [220, 20, 60],
+          # [100, 20, 0]]
 
-NUM_JOINTS = 2
+NUM_JOINTS = 14
 NUM_LIMBS = len(joint_to_limb_heatmap_relationship)
 
 

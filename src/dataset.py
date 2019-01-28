@@ -87,13 +87,13 @@ def _parse_function(img_id, mode):
 
     img_data = cv2.cvtColor(img_data, cv2.COLOR_BGR2RGB)
 
-    img = cv2.resize(img_data, (parameters['width'], parameters['height']))
-    img = np.asarray(img, dtype=np.float32) / 255.
+    img      = cv2.resize(img_data, (parameters['width'], parameters['height']))
+    img      = np.asarray(img, dtype=np.float32) / 255.
     heatmap_height = parameters['height'] // parameters['input_scale']
-    heatmap_width = parameters['width'] // parameters['input_scale']
+    heatmap_width  = parameters['width'] // parameters['input_scale']
 
     heatmap = get_heatmap(keypoints, h, w, heatmap_height, heatmap_width, kps_channels, sigma)
-    paf = get_paf(keypoints, h, w, heatmap_height, heatmap_width, paf_channels, parameters['paf_width_thre'])
+    paf     = get_paf(keypoints, h, w, heatmap_height, heatmap_width, paf_channels, parameters['paf_width_thre'])
     return img, heatmap, paf
 
 def get_dataset_pipeline(parameters, mode='train'):
