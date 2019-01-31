@@ -2,7 +2,7 @@ A tensorflow implementation about Arxiv Paper "[Real-time 2D Multi-Person Pose E
 
 **Note**
 
-The original caffe prototxt(provided by paper author) has been upload, you can found in repo file named "lightweight_openpose.prototxt"
+The original caffe prototxt(provided by paper author) has been upload, you can found in repo file named `lightweight_openpose.prototxt`
 
 **Requirement**
 * tensorflow >= 1.11.0
