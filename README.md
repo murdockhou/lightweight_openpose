@@ -1,6 +1,9 @@
 A tensorflow implementation about Arxiv Paper "[Real-time 2D Multi-Person Pose Estimation on CPU: Lightweight OpenPose](https://arxiv.org/abs/1811.12004)"
-**Not**
+
+**Note**
+
 The original caffe prototxt(provided by paper author) has been upload, you can found in repo file named "lightweight_openpose.prototxt"
+
 **Requirement**
 * tensorflow >= 1.11.0
 * python 3.6+
