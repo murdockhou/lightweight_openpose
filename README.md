@@ -2,7 +2,9 @@ A tensorflow implementation about Arxiv Paper "[Real-time 2D Multi-Person Pose E
 
 **trained model**
 
-* upload 2019-02-13, in `model` folder, `model.ckpt-1008540.*`.
+* upload 2019-02-13, in `model` folder, `model.ckpt-1008540.*`. 
+* someone who wants to use this lightweight_openpose model on your own dataset, please train it by yourself. The trained model upload only use to test but not
+good enough to use in practice. I did not trained it good enough. Pleas make sure that.
 
 **update**
 The original caffe prototxt(provided by paper author) has been upload, you can found in repo file named "lightweight_openpose.prototxt"
