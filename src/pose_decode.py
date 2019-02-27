@@ -16,6 +16,8 @@ from scipy.ndimage.morphology import generate_binary_structure
 # limb连接的点的id
 joint_to_limb_heatmap_relationship = [[0, 1], [1,2], [3, 4], [4, 5], [6, 7], [7, 8],
                                       [9, 10], [10, 11], [12, 13], [13, 0], [13, 3], [13, 6], [13, 9]]
+# joint_to_limb_heatmap_relationship = [[1,0], [2,1], [4, 3], [5, 4], [7, 6], [8, 7],
+#                                       [10, 9], [11, 10], [13, 12], [0, 13], [3, 13], [6, 13], [9, 13]]
 
 # 每个limb在paf中的id,例如第一个limb就是前两个paf的channel
 paf_xy_coords_per_limb = [[0, 1], [2, 3], [4, 5], [6, 7], [8, 9], [10, 11], [12, 13], [14, 15], [16, 17],
@@ -24,7 +26,7 @@ colors = [[255, 0, 0], [0,255,0], [0, 0, 255],
 [255, 0, 0], [0,255,0], [0, 0, 255],
 [255, 0, 0], [0,255,0], [0, 0, 255],
 [255, 0, 0], [0,255,0], [0, 0, 255],
-[255, 0, 0]]
+[255, 0, 0], [0,255,0]]
           # [255, 255,0], [255, 0, 255], [0, 255, 255],
           # [238, 248, 220], [255, 165, 100], [20, 205, 50],
           # [0, 191, 255], [0, 0, 205], [220, 20, 60],
@@ -156,7 +158,7 @@ def NMS(param, heatmaps, upsampFactor=1., bool_refine_center=True, bool_gaussian
     return joint_list_per_joint_type
 
 
-def find_connected_joints(param, paf_upsamp, joint_list_per_joint_type, num_intermed_pts=10, max_dist_thresh=0.25,
+def find_connected_joints(param, paf_upsamp, joint_list_per_joint_type, num_intermed_pts=10, max_dist_thresh=1,
                           max_paf_score_thresh=0.7):
     """
     For every type of limb (eg: forearm, shin, etc.), look for every potential
@@ -166,6 +168,7 @@ def find_connected_joints(param, paf_upsamp, joint_list_per_joint_type, num_inte
     :param joint_list_per_joint_type: See 'return' doc of NMS()
     :param num_intermed_pts: Int indicating how many intermediate points to take
     between joint_src and joint_dst, at which the PAFs will be evaluated
+    :param max_dist_thresh: do not set limb connected if limb length is bigger than (this threshold * img_height / img_width)
     :return: List of NUM_LIMBS rows. For every limb_type (a row) we store
     a list of all limbs of that type found (eg: all the right forearms).
     For each limb (each item in connected_limbs[limb_type]), we store 5 cells:
@@ -190,6 +193,7 @@ def find_connected_joints(param, paf_upsamp, joint_list_per_joint_type, num_inte
         if len(joints_src) == 0 or len(joints_dst) == 0:
             # No limbs of this type found (eg: no right forearms found because
             # we didn't find any right wrists or right elbows)
+            # print ('no limbs of this type found.')
             connected_limbs.append([])
         else:
             connections = np.empty((0, 5))
@@ -209,6 +213,7 @@ def find_connected_joints(param, paf_upsamp, joint_list_per_joint_type, num_inte
                     # direction of the potential limb
                     limb_dir = joint_dst[:2] - joint_src[:2]
                     if (np.abs(limb_dir) > long_dist_thresh).any():
+                        # print ('000')
                         continue
                     # Compute the distance/length of the potential limb (norm
                     # of limb_dir)
@@ -249,7 +254,7 @@ def find_connected_joints(param, paf_upsamp, joint_list_per_joint_type, num_inte
                 # scores of both joints
                 if best_connection:
                     # print(best_connection[2])
-                    # print(connections)
+                    # print('111', connections)
                     connections = np.vstack([connections, np.array(best_connection)])
 
             connected_limbs.append(connections)
@@ -378,20 +383,21 @@ def decode_pose(img_orig, param, heatmaps, pafs):
     # Step 1: find all joints in the image (organized by joint type: [0]=nose,
     # [1]=neck...)
     joint_list_per_joint_type = NMS(param, heatmaps, scale)
-    # print("points nums: ", [joint.shape for joint in joint_list_per_joint_type])
 
 
     # joint_list is an unravel'd version of joint_list_per_joint, where we add
     # a 5th column to indicate the joint_type (0=nose, 1=neck...)
     joint_list = np.array([tuple(peak) + (joint_type,) for joint_type, joint_peaks in enumerate(joint_list_per_joint_type)
                            for peak in joint_peaks])
-
+    # for joint in joint_list:
+    #     print (joint)
     # # Step 2: find which joints go together to form limbs (which wrists go
     # # with which elbows)
     paf_upsamp = cv2.resize(pafs, (img_orig.shape[1], img_orig.shape[0]), interpolation=cv2.INTER_CUBIC)
 
     connected_limbs = find_connected_joints(param, paf_upsamp, joint_list_per_joint_type)
-
+    # for limb in connected_limbs:
+    #     print(limb)
     # Step 3: associate limbs that belong to the same person
     person_to_joint_assoc = group_limbs_of_same_person(connected_limbs, joint_list)
 
