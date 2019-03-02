@@ -1,5 +1,7 @@
 A tensorflow implementation about Arxiv Paper "[Real-time 2D Multi-Person Pose Estimation on CPU: Lightweight OpenPose](https://arxiv.org/abs/1811.12004)"
 
+PyTorch [implementation](https://github.com/Daniil-Osokin/lightweight-human-pose-estimation.pytorch).
+
 **trained model**
 
 * upload 2019-02-13, in `model` folder, `model.ckpt-1008540.*`. 
