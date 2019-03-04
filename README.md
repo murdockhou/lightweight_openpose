@@ -3,7 +3,7 @@ A tensorflow implementation about Arxiv Paper "[Real-time 2D Multi-Person Pose E
 **Thanks for the author provide PyTorch version**
 
 (This repo is more useful than mine i think, enjoy it!)
-Pytorch[implementation](https://github.com/Daniil-Osokin/lightweight-human-pose-estimation.pytorch).
+Pytorch [implementation](https://github.com/Daniil-Osokin/lightweight-human-pose-estimation.pytorch).
 
 **trained model**
 
