@@ -1,6 +1,9 @@
 A tensorflow implementation about Arxiv Paper "[Real-time 2D Multi-Person Pose Estimation on CPU: Lightweight OpenPose](https://arxiv.org/abs/1811.12004)"
 
-PyTorch [implementation](https://github.com/Daniil-Osokin/lightweight-human-pose-estimation.pytorch).
+**Thanks for the author provide PyTorch version**
+
+(This repo is more useful than mine i think, enjoy it!)
+Pytorch[implementation](https://github.com/Daniil-Osokin/lightweight-human-pose-estimation.pytorch).
 
 **trained model**
 
