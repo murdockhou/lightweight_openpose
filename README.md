@@ -1,3 +1,8 @@
+**update 2019-03-06**
+
+Based on official pytorch implementation, re-write tf-model, see `model.py` for detailed information, corresponding net structure picture is named `lightweight.png`. New pre_trained
+model will be upload soon.
+ 
 A tensorflow implementation about Arxiv Paper "[Real-time 2D Multi-Person Pose Estimation on CPU: Lightweight OpenPose](https://arxiv.org/abs/1811.12004)"
 
 **trained model**
