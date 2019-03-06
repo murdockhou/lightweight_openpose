@@ -43,7 +43,7 @@ def lightweight_openpose(inputs, num_joints, num_pafs, is_training=True):
         heatmaps2 = conv(net, 128, kernel_size=1, bn=False)
         heatmaps2 = conv(heatmaps2, num_joints, kernel_size=1, bn=False, relu=False)
         pafs2     = conv(net, 128, kernel_size=1, bn=False)
-        pafs2     = conv(pafs2, num_pafs, kernel_size=1, bn=False, bias=False)
+        pafs2     = conv(pafs2, num_pafs, kernel_size=1, bn=False, relu=False)
 
     return heatmaps2, pafs2
 
