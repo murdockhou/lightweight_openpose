@@ -12,14 +12,14 @@ import os
 import time
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
-from src.lightweight_openpose import light_openpose
+# import matplotlib.pyplot as plt
+from src.lightweight_openpose import lightweight_openpose
 from src.pose_decode import decode_pose
 # from src.pose_decode_old import decode_pose
 params = {}
-params['test_model'] = '/home/ulsee/work/github/lightweight_openpose/model/model.ckpt-1008540'
+params['test_model'] = '/home/hsw/server/lightweight_openpose/model.ckpt-49215/model.ckpt-61236'
 # params['video_path'] = '/media/ulsee/E/video/bank/jiachaojian30.mp4'
-params['img_path']   = '/media/ulsee/E/ai_format_dataset/trainData_9544'
+params['img_path']   = '/media/hsw/E/datasets/ai_challenger_valid_test/ai_challenger_keypoint_validation_20170911/keypoint_validation_images_20170911'
 # params['img_path']   = '/media/ulsee/E/yuncong/yuncong_data/our/test/0/'
 
 params['thre1'] = 0.1
@@ -36,8 +36,8 @@ def main():
 
     input_img = tf.placeholder(tf.float32, shape=[1, None, None, 3])
 
-    _1, _2, cpm, paf = light_openpose(input_img, is_training=False)
-
+    # _1, _2, cpm, paf = light_openpose(input_img, is_training=False)
+    cpm, paf = lightweight_openpose(input_img, num_pafs=26, num_joints=14, is_training=False)
     saver = tf.train.Saver()
 
     total_img = 0
@@ -59,7 +59,7 @@ def main():
                     break
                 img_data = cv2.cvtColor(img_data, code=cv2.COLOR_BGR2RGB)
                 orih, oriw, c = img_data.shape
-                img = cv2.resize(img_data, (368, 368)) / 255.
+                img = cv2.resize(img_data, (256, 256)) / 255.
                 start_time = time.time()
                 heatmap, _paf = sess.run([cpm, paf], feed_dict={input_img: [img]})
                 end_time = time.time()
@@ -79,7 +79,7 @@ def main():
                     continue
                 img_data = cv2.imread(os.path.join(params['img_path'], img_name))
                 img_data = cv2.cvtColor(img_data, code=cv2.COLOR_BGR2RGB)
-                img = cv2.resize(img_data, (368, 368)) / 255.
+                img = cv2.resize(img_data, (256, 256)) / 255.
                 start_time = time.time()
                 heatmap, _paf = sess.run([cpm, paf], feed_dict={input_img: [img]})
                 end_time = time.time()
