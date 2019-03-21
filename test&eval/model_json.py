@@ -83,7 +83,10 @@ def main():
                 for i in range(14):
                     joint[3*i]   *= factorX
                     joint[3*i+1] *= factorY
-                kps['human' + str(human)] = joint
+                if type(joint) == type([]):
+                    kps['human' + str(human)] = joint
+                else:
+                    kps['human' + str(human)] = joint.tolist()
                 human += 1
 
             # print (human)
