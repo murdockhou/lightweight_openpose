@@ -320,7 +320,7 @@ def group_limbs_of_same_person(connected_limbs, joint_list):
                                                         .astype(int), 2] + limb_info[2]
             else:  # No person has claimed any of these joints, create a new person
                 # Initialize person info to all -1 (no joint associations)
-                row = -1 * np.ones(20)
+                row = -1 * np.ones(NUM_JOINTS+2)
                 # Store the joint info of the new connection
                 row[joint_src_type] = limb_info[0]
                 row[joint_dst_type] = limb_info[1]
@@ -334,9 +334,9 @@ def group_limbs_of_same_person(connected_limbs, joint_list):
 
     # Delete people who have very few parts connected
     people_to_delete = []
-    # for person_id, person_info in enumerate(person_to_joint_assoc):
-    #     if person_info[-1] < 3 or person_info[-2] / person_info[-1] < 0.2:
-    #         people_to_delete.append(person_id)
+    for person_id, person_info in enumerate(person_to_joint_assoc):
+        if person_info[-1] < 4 or person_info[-2] / person_info[-1] < 0.2:
+            people_to_delete.append(person_id)
 
     # Traverse the list in reverse order so we delete indices starting from the
     # last one (otherwise, removing item for example 0 would modify the indices of
@@ -353,17 +353,34 @@ def group_limbs_of_same_person(connected_limbs, joint_list):
 def plot_pose(img_orig, joint_list, person_to_joint_assoc, bool_fast_plot=True):
     canvas = img_orig.copy()  # Make a copy so we don't modify the original image
 
-    for limb_type in range(NUM_LIMBS):
-        for person_joint_info in person_to_joint_assoc:
+    person_num = person_to_joint_assoc.shape[0]
+    joints = np.zeros((person_num, 14, 3), dtype=np.float32)
+    # print (joints.shape)
+
+    for person, person_joint_info in enumerate(person_to_joint_assoc):
+        # print ('-------------find person {}----------------'.format(person))
+        for limb_type in range(NUM_LIMBS):
             joint_indices = person_joint_info[joint_to_limb_heatmap_relationship[limb_type]].astype(
                 int)
             if -1 in joint_indices or len(joint_indices) < 2:
                 # Only draw actual limbs (connected joints), skip if not
                 # connected
                 continue
+
             # joint_coords[:,0] represents Y coords of both joints;
             # joint_coords[:,1], X coords
             joint_coords = joint_list[joint_indices, 0:2]
+            # print ('joint_indices: {}, joint type: {} , joint_coords: {}'.format(joint_indices, joint_list[joint_indices, -1], joint_coords))
+
+            # find which joint part it is(0=rightShoulder, 1=rightElbow....for ai-challenger format)
+            joint_types = joint_list[joint_indices, -1]
+
+            for index, joint_type in enumerate(joint_types):
+                x = joint_coords[index][0]
+                y = joint_coords[index][1]
+                v = 1
+                # print (index, joint_type)
+                joints[person, int(joint_type), :] = [x, y, v]
 
             for joint in joint_coords:  # Draw circles at every joint
                 cv2.circle(canvas, tuple(joint[0:2].astype(
@@ -371,8 +388,27 @@ def plot_pose(img_orig, joint_list, person_to_joint_assoc, bool_fast_plot=True):
                 # mean along the axis=0 computes meanYcoord and meanXcoord -> Round
             cv2.line(canvas, tuple(joint_coords[0].astype(int)), tuple(joint_coords[1].astype(int)),
                      color=colors[limb_type], thickness=2)
+        # print ('person_joint_info: {}, joints: {}'.format(person_to_joint_assoc, joints))
+    # for limb_type in range(NUM_LIMBS):
+    #     for person_joint_info in person_to_joint_assoc:
+    #         joint_indices = person_joint_info[joint_to_limb_heatmap_relationship[limb_type]].astype(
+    #             int)
+    #         if -1 in joint_indices or len(joint_indices) < 2:
+    #             # Only draw actual limbs (connected joints), skip if not
+    #             # connected
+    #             continue
+    #         # joint_coords[:,0] represents Y coords of both joints;
+    #         # joint_coords[:,1], X coords
+    #         joint_coords = joint_list[joint_indices, 0:2]
+    #
+    #         for joint in joint_coords:  # Draw circles at every joint
+    #             cv2.circle(canvas, tuple(joint[0:2].astype(
+    #                 int)), 3, (255, 255, 255), thickness=-1)
+    #             # mean along the axis=0 computes meanYcoord and meanXcoord -> Round
+    #         cv2.line(canvas, tuple(joint_coords[0].astype(int)), tuple(joint_coords[1].astype(int)),
+    #                  color=colors[limb_type], thickness=2)
 
-    return canvas
+    return canvas, joints
 
 
 def decode_pose(img_orig, param, heatmaps, pafs):
@@ -383,25 +419,41 @@ def decode_pose(img_orig, param, heatmaps, pafs):
     # Step 1: find all joints in the image (organized by joint type: [0]=nose,
     # [1]=neck...)
     joint_list_per_joint_type = NMS(param, heatmaps, scale)
-
+    # for joint in joint_list_per_joint_type:
+    #     print ('....... ', joint)
 
     # joint_list is an unravel'd version of joint_list_per_joint, where we add
     # a 5th column to indicate the joint_type (0=nose, 1=neck...)
     joint_list = np.array([tuple(peak) + (joint_type,) for joint_type, joint_peaks in enumerate(joint_list_per_joint_type)
                            for peak in joint_peaks])
     # for joint in joint_list:
-    #     print (joint)
+    #     print ('*....* ', joint)
     # # Step 2: find which joints go together to form limbs (which wrists go
     # # with which elbows)
     paf_upsamp = cv2.resize(pafs, (img_orig.shape[1], img_orig.shape[0]), interpolation=cv2.INTER_CUBIC)
 
     connected_limbs = find_connected_joints(param, paf_upsamp, joint_list_per_joint_type)
-    # for limb in connected_limbs:
-    #     print(limb)
+
     # Step 3: associate limbs that belong to the same person
     person_to_joint_assoc = group_limbs_of_same_person(connected_limbs, joint_list)
 
-    # (Step 4): plot results
-    canvas = plot_pose(img_orig, joint_list, person_to_joint_assoc)
+    # for person in person_to_joint_assoc:
+    #     print (person.shape)
+    #     print (person)
 
-    return canvas, joint_list, person_to_joint_assoc
+
+    # (Step 4): plot results
+    # joints, ndarray, shape equals to (person_num, 14, 3)
+    canvas, joints = plot_pose(img_orig, joint_list, person_to_joint_assoc)
+
+    # for person, joint in enumerate(joints):
+    #     assert joint.shape == (14,3)
+    #     for i in range(14):
+    #         x = int(joint[i][0])
+    #         y = int(joint[i][1])
+    #         cv2.circle(img_orig, (x, y), 3, (255, 255, 255), thickness=-1)
+    #         cv2.putText(img_orig, str(i), (x, y),cv2.FONT_HERSHEY_COMPLEX, 1, colors[person], 1)
+    # cv2.imshow('test', img_orig)
+    # cv2.waitKey(0)
+    joints = np.reshape(joints, (-1, 14*3))
+    return canvas, joint_list, person_to_joint_assoc, joints

@@ -1,3 +1,19 @@
+**update 2019-03-20**
+
+Add evaluation part. The evaluation based on [ai-challenger evaluation](https://github.com/AIChallenger/AI_Challenger_2017/tree/master/Evaluation/keypoint_eval) solution. 
+More information please refer to this link.
+
+Easy way for how to use it:
+* First, you need run  `test&model/model_json.py` to generate a json file. The `param` in this file contains everything you need.
+Remember that `param['img_path] && param['jason_file']` parameters is the **groundtruth test files** that you need to test.
+* Then, run `test&model/model_eval.py`, the command line would be like this:
+    
+        python model_eval.py --submit predictions.json --ref groundtruth.json
+  this will give you a score that about your model performance, between **`0~1`**, 0 is worst and 1 is best.
+  Make sure that you need run **`python2`** instead of **`python3`** because some errors will occur in `eval.py` file.
+
+
+
 **update 2019-03-18**
 
 Based on official pytorch implementation, re-write tf-model, see `lightweight_openpose.py` for detailed information, corresponding net structure picture is named `lightweight.png`. New pre_trained
@@ -13,7 +29,7 @@ Pytorch [implementation](https://github.com/Daniil-Osokin/lightweight-human-pose
 **trained model**
 
 * ~~upload 2019-02-13, in `model` folder, `model.ckpt-1008540.*`.~~ 
-* upload 2019-03-18, in `model`folder, named `model.ckpt-61236`
+* upload 2019-03-18, in `model`folder, named `model.ckpt-61236`, on ai_test_A dataset, get score **0.0377**, so bad.
 * someone who wants to use this lightweight_openpose model on your own dataset, please train it by yourself. The trained model upload only use to test but not
 good enough to use in practice. I did not trained it good enough. Pleas make sure that.
 

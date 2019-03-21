@@ -1,3 +1,5 @@
 *.pyc
 .idea/
 .gitignore
+*.ipynb
+./ipynb_checkpoints/
