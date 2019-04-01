@@ -106,8 +106,8 @@ def _parse_function(img_id, mode='train'):
     mask = np.zeros((heatmap_height, heatmap_width, 1), dtype=np.float32)
     for value in bboxs:
         body_box = value
-        factorX = w / parameters['width'] / heatmap_width
-        factorY = h / parameters['height'] / heatmap_height
+        factorX = w  / heatmap_width
+        factorY = h  / heatmap_height
         body_box[0] /= factorX
         body_box[1] /= factorY
         body_box[2] /= factorX
