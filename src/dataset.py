@@ -106,10 +106,12 @@ def _parse_function(img_id, mode='train'):
     mask = np.zeros((heatmap_height, heatmap_width, 1), dtype=np.float32)
     for value in bboxs:
         body_box = value
-        body_box[0] /= heatmap_width
-        body_box[1] /= heatmap_height
-        body_box[2] /= heatmap_width
-        body_box[3] /= heatmap_height
+        factorX = w / parameters['width'] / heatmap_width
+        factorY = h / parameters['height'] / heatmap_height
+        body_box[0] /= factorX
+        body_box[1] /= factorY
+        body_box[2] /= factorX
+        body_box[3] /= factorY
 
         minx = int(max(1, body_box[0] - 5))
         miny = int(max(1, body_box[1] - 5))
