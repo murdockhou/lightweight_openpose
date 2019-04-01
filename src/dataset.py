@@ -51,7 +51,7 @@ def prepare(json_file):
     return img_ids
 
 
-def _parse_function(img_id, mode):
+def _parse_function(img_id, mode='train'):
 
     global id_kps_dict, parameters
 
@@ -85,8 +85,12 @@ def _parse_function(img_id, mode):
 
     keypoints = np.reshape(np.asarray(keypoints), newshape=(-1, kps_channels, 3))
 
+    bboxs = []
+    for key, value in id_body_annos[img_id].items():
+        bboxs.append(value)
     if data_aug:
-        img_data, keypoints = img_aug_fuc(img_data, keypoints)
+        # print('run data aug')
+        img_data, keypoints, bboxs = img_aug_fuc(img_data, keypoints, bboxs)
 
     img_data = cv2.cvtColor(img_data, cv2.COLOR_BGR2RGB)
 
@@ -100,7 +104,7 @@ def _parse_function(img_id, mode):
 
     # add head mask info
     mask = np.zeros((heatmap_height, heatmap_width, 1), dtype=np.float32)
-    for key, value in id_body_annos[img_id].items():
+    for value in bboxs:
         body_box = value
         body_box[0] /= heatmap_width
         body_box[1] /= heatmap_height
@@ -153,6 +157,7 @@ if __name__ == '__main__':
     from src.train_config import train_config as params
     set_params(params)
     imgids = prepare(params['train_json_file'])
+
     for i in range(10):
         _parse_function(imgids[i], 'train')
 #

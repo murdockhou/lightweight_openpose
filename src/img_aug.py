@@ -14,7 +14,7 @@ import numpy as np
 import copy
 import cv2
 
-def img_aug_fuc(img, kps):
+def img_aug_fuc(img, kps, bboxs = None):
     '''
     function that used for data augmentation
     :param img: ori_image that was prepared to run aug, shape must be [h, w, c]
@@ -22,7 +22,8 @@ def img_aug_fuc(img, kps):
     person_num means that there contains 'person_num' person on this image
     joints_num means that we want to detect how many joints. e.g. like 1 for single head point or 14 for all body points in ai-challenger format.
     3 means [x, y, v], v is the visable attribute for one joint point.
-    :return: img and kps after augmentation.
+    :param bboxs:  a list of lists. [[xmin, ymin, xmax, ymax], ...]
+    :return: img , kps, bboxs after augmentation.
     '''
 
     kps_ori = np.copy(kps)
@@ -56,9 +57,32 @@ def img_aug_fuc(img, kps):
             point = kps[person][joint]
             keypoints.keypoints.append(ia.Keypoint(x=point[0], y=point[1]))
 
+    # 定义bbox
+    if bboxs:
+        assert type(bboxs) == type([])
+        bbs = ia.BoundingBoxesOnImage([], shape=img.shape)
+        for value in bboxs:
+            bbs.bounding_boxes.append(ia.BoundingBox(x1=value[0], y1=value[1], x2=value[2], y2=value[3]))
     # 执行augmentation
     img_aug = seq_det.augment_image(img).copy()
     kps_aug = seq_det.augment_keypoints([keypoints])[0]
+    bboxs_ret = []
+    if bboxs:
+        bbs_aug = seq_det.augment_bounding_boxes([bbs])[0]
+        for i in range(len(bbs_aug.bounding_boxes)):
+            # oribox = bbs.bounding_boxes[i]
+            boxaug = bbs_aug.bounding_boxes[i]
+            box = [boxaug.x1, boxaug.y1, boxaug.x2, boxaug.y2]
+            bboxs_ret.append(box)
+
+            # print('{} -> {}'.format(oribox, boxaug))
+        # test
+        # print(bboxs_ret)
+        # img_before = bbs.draw_on_image(img, thickness=2)
+        # cv2.imshow('before', img_before)
+        # img_after  = bbs_aug.draw_on_image(img_aug, thickness=2, color=[0,0,255])
+        # cv2.imshow('after', img_after)
+        # cv2.waitKey(0)
 
     # 返回augmentation之后的keypoints
     ret_kps = []
@@ -120,4 +144,4 @@ def img_aug_fuc(img, kps):
 
     # print (ret_kps)
 
-    return img_aug, ret_kps
+    return img_aug, ret_kps, bboxs_ret
