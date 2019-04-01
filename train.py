@@ -25,7 +25,10 @@ def model_fn(features, labels, mode, params):
     # get model output
     features = tf.reshape(features, [-1, params['height'],params['width'], 3])
     gt_cpms = labels[..., :params['num_kps']]
-    gt_pafs = labels[..., params['num_kps']:]
+    gt_pafs = labels[..., params['num_kps']:params['num_kps'] + params['paf']]
+    mask = labels[..., params['num_kps'] + params['paf']:]
+    mask = tf.reshape(mask, [-1, params['height']//params['scale'], params['width']//params['scale'], 1])
+
     cpm, paf = lightweight_openpose(inputs=features, num_joints=params['num_kps'], num_pafs=params['paf'], is_training=True)
 
     predictions = {
@@ -53,7 +56,13 @@ def model_fn(features, labels, mode, params):
                 'predict': tf.estimator.export.PredictOutput(predictions)
             })
 
-    loss = tf.nn.l2_loss(cpm - gt_cpms) + tf.nn.l2_loss(paf - gt_pafs)
+    cpm_mask = tf.concat([mask for i in range(params['num_kps'])], axis=-1)
+    paf_mask = tf.concat([mask for i in range(params['paf'])], axis=-1)
+    cpm = tf.where(cpm_mask > 0, cpm, cpm * 0)
+    paf = tf.where(paf_mask > 0, paf, paf * 0)
+    gt_cpms = tf.where(cpm_mask > 0, gt_cpms, gt_cpms * 0)
+    gt_pafs = tf.where(paf_mask > 0, gt_pafs, gt_pafs * 0)
+    loss = tf.nn.l2_loss(cpm - gt_cpms) + tf.nn.l2_loss(paf - gt_pafs) * 2
 
     tf.identity(loss, name='loss')
     tf.summary.scalar('loss', loss)
@@ -146,7 +155,8 @@ def main():
             'height': train_config['height'],
             'width': train_config['width'],
             'num_kps': train_config['num_kps'],
-            'paf': train_config['paf']
+            'paf': train_config['paf'],
+            'scale': train_config['input_scale']
         },
         warm_start_from=ws
     )

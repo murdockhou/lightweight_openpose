@@ -22,6 +22,7 @@ from src.img_aug import img_aug_fuc
 
 id_kps_dict = {}
 parameters = {}
+id_body_annos = {}
 
 
 def set_params(params):
@@ -32,6 +33,7 @@ def set_params(params):
 def prepare(json_file):
 
     global id_kps_dict
+    global id_body_annos
 
     img_ids   = []
 
@@ -44,6 +46,7 @@ def prepare(json_file):
                 kps += val
             kps = np.reshape(np.asarray(kps), (-1, 14, 3))
             id_kps_dict[anno['image_id']] = kps
+            id_body_annos[anno['image_id']] = anno['human_annotations']
 
     return img_ids
 
@@ -95,7 +98,23 @@ def _parse_function(img_id, mode):
     heatmap = get_heatmap(keypoints, h, w, heatmap_height, heatmap_width, kps_channels, sigma)
     paf     = get_paf(keypoints, h, w, heatmap_height, heatmap_width, paf_channels, parameters['paf_width_thre'])
 
-    labels = np.concatenate([heatmap, paf], axis=-1)
+    # add head mask info
+    mask = np.zeros((heatmap_height, heatmap_width, 1), dtype=np.float32)
+    for key, value in id_body_annos[img_id].items():
+        body_box = value
+        body_box[0] /= heatmap_width
+        body_box[1] /= heatmap_height
+        body_box[2] /= heatmap_width
+        body_box[3] /= heatmap_height
+
+        minx = int(max(1, body_box[0] - 5))
+        miny = int(max(1, body_box[1] - 5))
+        maxx = int(min(heatmap_width - 1, body_box[2] + 5))
+        maxy = int(min(heatmap_height - 1, body_box[3] + 5))
+
+        mask[miny:maxy, minx:maxx, :] = True
+    
+    labels = np.concatenate([heatmap, paf, mask], axis=-1)
     return img, labels
 
 def get_dataset_pipeline(parameters, epochs=1, mode='train'):

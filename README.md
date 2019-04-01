@@ -1,3 +1,8 @@
+**update 2019-04-01**
+
+* Add person body mask information. No loss will be added where there is no person annotations in image.
+* Increase `paf loss` weight in total loss. Previous `cpm_loss : paf_loss == 1:1` and now is '1:2'
+
 **update 2019-03-20**
 
 Add evaluation part. The evaluation based on [ai-challenger evaluation](https://github.com/AIChallenger/AI_Challenger_2017/tree/master/Evaluation/keypoint_eval) solution. 
