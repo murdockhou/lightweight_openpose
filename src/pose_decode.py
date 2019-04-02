@@ -22,15 +22,13 @@ joint_to_limb_heatmap_relationship = [[0, 1], [1,2], [3, 4], [4, 5], [6, 7], [7,
 # 每个limb在paf中的id,例如第一个limb就是前两个paf的channel
 paf_xy_coords_per_limb = [[0, 1], [2, 3], [4, 5], [6, 7], [8, 9], [10, 11], [12, 13], [14, 15], [16, 17],
                           [18, 19], [20, 21], [22, 23], [24, 25]]
+
 colors = [[255, 0, 0], [0,255,0], [0, 0, 255],
-[255, 0, 0], [0,255,0], [0, 0, 255],
-[255, 0, 0], [0,255,0], [0, 0, 255],
-[255, 0, 0], [0,255,0], [0, 0, 255],
-[255, 0, 0], [0,255,0]]
-          # [255, 255,0], [255, 0, 255], [0, 255, 255],
-          # [238, 248, 220], [255, 165, 100], [20, 205, 50],
-          # [0, 191, 255], [0, 0, 205], [220, 20, 60],
-          # [100, 20, 0]]
+          [255, 0, 255], [0,255,255], [255, 0, 255],
+          [100, 60, 39], [35, 200, 111], [200, 40, 145],
+          [238, 248, 220], [255, 165, 100], [20, 205, 50],
+          [0, 191, 255], [0, 0, 205], [220, 20, 60],
+          [100, 20, 0]]
 
 NUM_JOINTS = 14
 NUM_LIMBS = len(joint_to_limb_heatmap_relationship)
@@ -49,6 +47,34 @@ def find_peaks(param, img):
     # Note reverse ([::-1]): we return [[x y], [x y]...] instead of [[y x], [y
     # x]...]
     return np.array(np.nonzero(peaks_binary)[::-1]).T
+
+
+def find_peaks_v2(param, img):
+    dis_thres = 5
+    x, y = np.where(img > param['thre1'])
+    coordinate = list(zip(x, y))
+    scores = []
+    for coor in coordinate:
+        scores.append(img[coor])
+    s = np.asarray(scores)
+    sIndex = s.argsort()[::-1]
+    keepIndex = []
+    while sIndex.size > 0:
+        keepIndex.append(sIndex[0])
+        sIndex = sIndex[1:]
+        last = []
+        for index in sIndex:
+            dis = np.linalg.norm(np.asarray(coordinate[keepIndex[-1]]) - np.asarray(coordinate[index]))
+            if dis > dis_thres:
+                last.append(index)
+        sIndex = np.asarray(last)
+    peaks = []
+    for index in keepIndex:
+        coorX = coordinate[index][1]
+        coorY = coordinate[index][0]
+        peaks.append([coorX, coorY])
+    return np.asarray(peaks)
+
 
 
 def compute_resized_coords(coords, resizeFactor):
@@ -116,7 +142,8 @@ def NMS(param, heatmaps, upsampFactor=1., bool_refine_center=True, bool_gaussian
 
     for joint in range(NUM_JOINTS):
         map_orig = heatmaps[:, :, joint]
-        peak_coords = find_peaks(param, map_orig)
+        # peak_coords = find_peaks(param, map_orig)
+        peak_coords = find_peaks_v2(param, map_orig)
         peaks = np.zeros((len(peak_coords), 5))
         for i, peak in enumerate(peak_coords):
             if bool_refine_center:
@@ -181,6 +208,10 @@ def find_connected_joints(param, paf_upsamp, joint_list_per_joint_type, num_inte
     connected_limbs = []
     long_dist_thresh = np.array([paf_upsamp.shape[1], paf_upsamp.shape[0]]) * max_dist_thresh
     # Auxiliary array to access paf_upsamp quickly
+    # 这个limb_intermed_coords, 是个(4, num_intermed_pts)ndarray, 对其赋值完之后,
+    # 第一行表示的取得两个关节点之间10个值的y坐标
+    # 第二行表示的取得的两个关节点之间10个值的x坐标
+    # 第三 四行表示这两个关节点的所在的paf channel位置,根据paf_xy_coords_per_limb得到
     limb_intermed_coords = np.empty((4, num_intermed_pts), dtype=np.intp)
     for limb_type in range(NUM_LIMBS):
         # 假如我们希望链接脖子到头的点，那么这一步就是找到所有的头和脖子点的过程
@@ -200,15 +231,19 @@ def find_connected_joints(param, paf_upsamp, joint_list_per_joint_type, num_inte
             # Specify the paf index that contains the x-coord of the paf for
             # this limb
             # 这一对paf在heatmap中对应的id
+
             limb_intermed_coords[2, :] = paf_xy_coords_per_limb[limb_type][0]
+            # print (paf_xy_coords_per_limb[limb_type][0])
             # And the y-coord paf index
             limb_intermed_coords[3, :] = paf_xy_coords_per_limb[limb_type][1]
             for i, joint_src in enumerate(joints_src):
+                # print (i, joint_src)
                 # Try every possible joints_src[i]-joints_dst[j] pair and see
                 # if it's a feasible limb
                 best_score = 0.0
                 best_connection = []
                 for j, joint_dst in enumerate(joints_dst):
+                    # print (j, joint_dst)
                     # Subtract the position of both joints to obtain the
                     # direction of the potential limb
                     limb_dir = joint_dst[:2] - joint_src[:2]
@@ -227,12 +262,15 @@ def find_connected_joints(param, paf_upsamp, joint_list_per_joint_type, num_inte
                     # Same for the y coordinate
                     limb_intermed_coords[0, :] = np.round(np.linspace(
                         joint_src[1], joint_dst[1], num=num_intermed_pts))
+
+                    # 找到两个关节点之间的paf值
                     intermed_paf = paf_upsamp[limb_intermed_coords[0, :],
                                               limb_intermed_coords[1, :], limb_intermed_coords[2:4, :]].T
 
                     score_intermed_pts = intermed_paf.dot(limb_dir)
-                    score_penalizing_long_dist = score_intermed_pts.mean(
-                    ) + min(0.5 * paf_upsamp.shape[0] / limb_dist - 1, 0)
+                    score_penalizing_long_dist = score_intermed_pts.mean()
+                    # score_penalizing_long_dist = score_intermed_pts.mean(
+                    # ) + min(0.5 * paf_upsamp.shape[0] / limb_dist - 1, 0)
                     # Criterion 1: At least 80% of the intermediate points have
                     # a score higher than thre2
                     criterion1 = (np.count_nonzero(
@@ -241,14 +279,15 @@ def find_connected_joints(param, paf_upsamp, joint_list_per_joint_type, num_inte
                     # Criterion 2: Mean score, penalized for large limb
                     # distances (larger than half the image height), is
                     # positive
-                    criterion2 = (score_penalizing_long_dist > 0)
+                    # print ('score penalizing long dist: {}, mean: {}'.format(score_penalizing_long_dist, score_intermed_pts.mean()))
+                    criterion2 = (score_penalizing_long_dist > param['thre2'])
                     # print()
                     if criterion1 and criterion2 and score_penalizing_long_dist > best_score:
                         best_score = score_penalizing_long_dist
                         best_connection = [joint_src[3], joint_dst[3], score_penalizing_long_dist, i, j]
                         # print('best_connection')
-                        if best_score > max_paf_score_thresh:
-                            break
+                        # if best_score > max_paf_score_thresh:
+                        #     break
 
                 # Last value is the combined paf(+limb_dist) + heatmap
                 # scores of both joints
@@ -273,13 +312,20 @@ def group_limbs_of_same_person(connected_limbs, joint_list):
     # 2nd-to-last column: Overall score of the joints+limbs that belong to this person
     # Last column: Total count of joints found for this person
     """
+
+    # person_to_joint_assoc是一个列表的列表, 每个子列表都是一个1x(num_joints+2)的ndarray
     person_to_joint_assoc = []
 
     for limb_type in range(NUM_LIMBS):
+        # 需要连接关节点的类型
         joint_src_type, joint_dst_type = joint_to_limb_heatmap_relationship[limb_type]
 
+        # 对connect_limbs里对应的limb_type那行进行遍历, 就是遍历所有的这个类型的关节
         for limb_info in connected_limbs[limb_type]:
+
             person_assoc_idx = []
+            # 如果在已有的person_to_joint_assoc里,已有的连接和此时需要处理的limb_info保存的unique_id一样,
+            # ??????
             for person, person_limbs in enumerate(person_to_joint_assoc):
                 if person_limbs[joint_src_type] == limb_info[0] or person_limbs[joint_dst_type] == limb_info[1]:
                     person_assoc_idx.append(person)
@@ -335,7 +381,7 @@ def group_limbs_of_same_person(connected_limbs, joint_list):
     # Delete people who have very few parts connected
     people_to_delete = []
     for person_id, person_info in enumerate(person_to_joint_assoc):
-        if person_info[-1] < 4 or person_info[-2] / person_info[-1] < 0.2:
+        if person_info[-1] < 3 or (person_info[-2] / person_info[-1] < 0.2):
             people_to_delete.append(person_id)
 
     # Traverse the list in reverse order so we delete indices starting from the
@@ -387,7 +433,7 @@ def plot_pose(img_orig, joint_list, person_to_joint_assoc, bool_fast_plot=True):
                     int)), 3, (255, 255, 255), thickness=-1)
                 # mean along the axis=0 computes meanYcoord and meanXcoord -> Round
             cv2.line(canvas, tuple(joint_coords[0].astype(int)), tuple(joint_coords[1].astype(int)),
-                     color=colors[limb_type], thickness=2)
+                     color=colors[person % len(colors)], thickness=2)
         # print ('person_joint_info: {}, joints: {}'.format(person_to_joint_assoc, joints))
     # for limb_type in range(NUM_LIMBS):
     #     for person_joint_info in person_to_joint_assoc:
@@ -418,12 +464,20 @@ def decode_pose(img_orig, param, heatmaps, pafs):
     # Bottom-up approach:
     # Step 1: find all joints in the image (organized by joint type: [0]=nose,
     # [1]=neck...)
+    # 这一步就是通过NMS找到所有在heatmap上满足响应阈值的点的坐标, joint_list_per_joint_type是个包含14个list的lists,
+    # 14表示总共有14个点的类型. 每个list又是一个包含多个list的lists, 其中每个list是[x, y, score, unique_id, used_flag]类型,
+    # x和y表示坐标点位置, score是这个点的分数, unique_id标明这个点在所有点中的id, used_flag用来表示这个点是否被使用过, 用在下面的程序里
+
     joint_list_per_joint_type = NMS(param, heatmaps, scale)
     # for joint in joint_list_per_joint_type:
     #     print ('....... ', joint)
 
     # joint_list is an unravel'd version of joint_list_per_joint, where we add
     # a 5th column to indicate the joint_type (0=nose, 1=neck...)
+
+    # joint_list_per_joint_type是个列表的列表中组合, 这行代码是把其变成个ndarray, shape变成(total_joints_num, 6). 其中每一行都是
+    # 6个值, 前5个和joint_list_per_joint_type的值一样, 最后一个指代该点的类型, 例如0就代表右肩, 1代表右肘.....
+
     joint_list = np.array([tuple(peak) + (joint_type,) for joint_type, joint_peaks in enumerate(joint_list_per_joint_type)
                            for peak in joint_peaks])
     # for joint in joint_list:
@@ -432,6 +486,10 @@ def decode_pose(img_orig, param, heatmaps, pafs):
     # # with which elbows)
     paf_upsamp = cv2.resize(pafs, (img_orig.shape[1], img_orig.shape[0]), interpolation=cv2.INTER_CUBIC)
 
+    # 这一步是找到所有可能的连接, connected_limbs是个lists的list, 有多少个需要连接的关节连接个数, 就有多少行, 每一行同样包含不定个数的list,存储的是这个连接所有潜在的连接可能
+    # 每一行包含不定的lists, 每个list包含五个值, [joint_src_id,joint_dst_id, limb_score, joint_src_index, joint_dst_index], 前两个用来存储找到的两个点的unique_id,
+    # limb_score是计算得到的这个关节连接的分数, joint_src_index和joint_dst_index用来存储找到的点在这个同类型的点的位置. 例如对于头和脖子这个连接,
+    # 我们不仅要找到头和脖子这两个点, 并且知道这两个点的unique_id, 还存储了这两个点的在总的type中的位置, 例如这是所有头部点中的第joint_src_index个头部点和所有脖子点中的第joint_dst_index个脖子点
     connected_limbs = find_connected_joints(param, paf_upsamp, joint_list_per_joint_type)
 
     # Step 3: associate limbs that belong to the same person
