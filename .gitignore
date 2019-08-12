@@ -3,3 +3,4 @@
 .gitignore
 *.ipynb
 ./ipynb_checkpoints/
+logs/
