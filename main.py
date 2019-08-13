@@ -24,6 +24,7 @@ if __name__ == '__main__':
     model = tf.keras.Model(inputs, outputs)
 
     cur_time = datetime.datetime.fromtimestamp(datetime.datetime.now().timestamp()).strftime('%Y-%m-%d-%H-%M')
+
     optimizer = tf.optimizers.Adam(learning_rate=1e-4)
     dataset = get_dataset()
     epochs = 200

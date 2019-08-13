@@ -13,6 +13,26 @@ import tensorflow as tf
 from configs.ai_config import ai_config
 import os
 
+def lr_schedules(epoch, base_lr=1e-4):
+    # use warmup learning
+    lr = base_lr
+    if epoch <= 10:
+        lr = base_lr * 0.1 * epoch / 10
+    elif epoch <= 30:
+        lr = base_lr * 0.1
+        ai_config['sigma'] = 1.5
+        ai_config['paf_width'] = 1.5
+    elif epoch <= 50:
+        lr = base_lr * 0.01
+        ai_config['sigma'] = 1.
+        ai_config['paf_width'] = 1.
+    else:
+        lr = base_lr * 0.001
+        ai_config['sigma'] = 0.5
+        ai_config['paf_width'] = 0.5
+
+    return lr
+
 def train(model, optimizer, dataset, epochs, cur_time='8888-88-88-88-88', max_keeps=200):
     ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)
     if ai_config['finetune'] is not None:
@@ -35,6 +55,7 @@ def train(model, optimizer, dataset, epochs, cur_time='8888-88-88-88-88', max_ke
                     paf_loss += tf.reduce_sum(tf.nn.l2_loss(output[1]-paf))
                 loss = heatmap_loss + paf_loss
             grads = tape.gradient(loss, model.trainable_variables)
+            optimizer.learning_rate = lr_schedules(epoch+1)
             optimizer.apply_gradients(zip(grads, model.trainable_variables))
             ckpt.step.assign_add(1)
             tf.summary.scalar('loss', loss, step=int(ckpt.step))
@@ -53,8 +74,8 @@ def train(model, optimizer, dataset, epochs, cur_time='8888-88-88-88-88', max_ke
                     axis=-1), step=int(ckpt.step), max_outputs=3)
 
             if int(ckpt.step) % 20 == 0:
-                print('for epoch {:<5d} step {:<10d}, loss = {:<10f}, heat loss = {:<10f}, paf loss = {:<10f}'.format(
-                    epoch, int(ckpt.step), loss, heatmap_loss, paf_loss))
+                print('for epoch {:<3d} step {:<5d}, lr = {:<10f}, loss = {:<10f}, heat loss = {:<10f}, paf loss = {:<10f}'.format(
+                    epoch, int(ckpt.step), optimizer.learning_rate.numpy(), loss, heatmap_loss, paf_loss))
             if int(ckpt.step) % 5000 == 0:
                 save_path = manager.save()
                 print('Saved ckpt for step {} : {}'.format(int(ckpt.step), save_path))
