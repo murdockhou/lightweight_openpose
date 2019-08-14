@@ -1,3 +1,7 @@
+**update 2019-08-14**
+
+Add tensorflow 2.0 version, link [here](https://github.com/murdockhou/lightweight_openpose/tree/tf2.0_version). Repo still need to update. Welcome to raise questions.
+
 **update 2019-04-01**
 
 * Add person body mask information. No loss will be added where there is no person annotations in image.
